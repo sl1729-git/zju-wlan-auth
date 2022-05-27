@@ -2,7 +2,6 @@ import base64
 from hashlib import sha1
 import hmac
 import sys
-from xmlrpc.client import Boolean
 sys.path.append(".")
 from utils.xEncode import force, xencode
 
@@ -133,7 +132,7 @@ def try_login(url:str, state:Dict):
     state["error"] = content["error"]
     return state["error"]
 
-def update(state:Dict, key:str, value) -> Boolean:
+def update(state:Dict, key:str, value) -> bool:
     if key in state.keys():
         return False
     state[key] = value
@@ -141,7 +140,7 @@ def update(state:Dict, key:str, value) -> Boolean:
 
 
 
-def login(state:Dict) -> Boolean:
+def login(state:Dict) -> bool:
     if not state.get("username", None) or not state.get("password", None):
         print("login fail for no username or password")
         return False
