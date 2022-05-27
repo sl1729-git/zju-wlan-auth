@@ -138,8 +138,6 @@ def update(state:Dict, key:str, value) -> bool:
     state[key] = value
     return True
 
-
-
 def login(state:Dict) -> bool:
     if not state.get("username", None) or not state.get("password", None):
         print("login fail for no username or password")
