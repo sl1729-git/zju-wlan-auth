@@ -20,7 +20,8 @@ def main(argv):
     if state["show-help"]:
         print(help_meg)
         return 0
-    # login(state)
+    if login(state):
+        print("login successfully")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
