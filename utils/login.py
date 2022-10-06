@@ -4,7 +4,8 @@ import hmac
 import sys
 sys.path.append(".")
 from utils.xEncode import force, xencode
-
+from urllib import request
+import urllib.parse as parse
 
 import json
 from random import Random
@@ -12,10 +13,16 @@ import time
 from typing import Dict
 from urllib.parse import parse_qs, urlparse
 import requests
-url0 = "http://10.115.9.1/"
-url1 = "http://10.115.9.1/cgi-bin/rad_user_info"
-url2 = "http://10.115.9.1/cgi-bin/get_challenge"
-url3 = "http://10.115.9.1/cgi-bin/srun_portal"
+url = "http://www.zju.edu.cn/"
+url_formats = ["http://{0}/", "http://{0}/cgi-bin/rad_user_info", "http://{0}/cgi-bin/get_challenge", "http://{0}/cgi-bin/srun_portal"]
+
+def get_urls():
+    response = requests.get(url)
+    url_parsed = urlparse(response.url)
+    if len(response.history) > 1:
+        return False, tuple(map(lambda urlf:urlf.format(url_parsed.hostname) , url_formats))
+    else:
+        return True, tuple()
 
 def get_acid(url:str, state:Dict):
     headers = {"User-Agent":state["UA"]}
@@ -81,7 +88,7 @@ def get_info(state:Dict):
 def get_password(state:Dict):
     password = state["password"]
     key = state["challenge"]
-    hmd5 = hmac.new(key=key.encode("utf-8"), msg=password.encode("utf-8")).hexdigest()
+    hmd5 = hmac.new(key=key.encode("utf-8"), msg=password.encode("utf-8"), digestmod="md5").hexdigest()
     hmd5 = "{MD5}" + hmd5
     state["hmd5"] = hmd5
     return hmd5
@@ -150,11 +157,13 @@ def login(state:Dict) -> bool:
     update(state, "UA", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36")
     update(state, "Accept-Language", "zh,zh-CN;q=0.9")
     update(state, "X-Requested-With", "XMLHttpRequest")
-    get_acid(url0, state)
-    is_login = get_state(url1, state)
-    if is_login == "ok":
+    logined, urls = get_urls()
+    if(logined):
         print("alreay login in")
         return True
+    url0, url1, url2, url3 = urls
+    get_acid(url0, state)
+    get_state(url1, state)
     get_challenge(url2, state)
     try_login(url3, state)
     return state["error"] == "ok"
