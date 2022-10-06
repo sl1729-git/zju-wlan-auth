@@ -12,22 +12,32 @@ from random import Random
 import time
 from typing import Dict
 from urllib.parse import parse_qs, urlparse
-import requests
 url = "http://www.zju.edu.cn/"
 url_formats = ["http://{0}/", "http://{0}/cgi-bin/rad_user_info", "http://{0}/cgi-bin/get_challenge", "http://{0}/cgi-bin/srun_portal"]
 
+def requestGet(url:str, params:dict = None, headers:dict = None):
+    if params:
+        query = parse.urlencode(params)
+        url = f"{url}?{query}"
+    if headers is None:
+        headers = {}
+    req = request.Request(url= url, headers=headers, method="GET")
+    ret = request.urlopen(req)
+    return ret.geturl(), ret.read().decode("utf-8")
+
 def get_urls():
-    response = requests.get(url)
-    url_parsed = urlparse(response.url)
-    if len(response.history) > 1:
-        return False, tuple(map(lambda urlf:urlf.format(url_parsed.hostname) , url_formats))
+    url_parsed = urlparse(url)
+    resp_url, _ = requestGet(url)
+    resp_url_parsed = urlparse(resp_url)
+    if url_parsed.hostname != resp_url_parsed.hostname:
+        return False, tuple(map(lambda urlf:urlf.format(resp_url_parsed.hostname) , url_formats))
     else:
         return True, tuple()
 
 def get_acid(url:str, state:Dict):
     headers = {"User-Agent":state["UA"]}
-    response = requests.get(url, headers=headers)
-    url_parsed = urlparse(response.url)
+    resp_url, _ = requestGet(url, headers=headers)
+    url_parsed = urlparse(resp_url)
     acid = parse_qs(url_parsed.query).get("ac_id",[])
     acid.append(0)
     state["ac_id"] = acid[0]
@@ -40,8 +50,8 @@ def get_state(url:str, state:Dict):
     params = {}
     params["callback"] = state["callback"]
     params["_"] = state["clock"]
-    response = requests.get(url, params=params, headers=get_headers(state))
-    content = json.loads(response.content[len(state["callback"]) + 1:-1])
+    _, content = requestGet(url, params=params, headers=get_headers(state))
+    content = json.loads(content[len(state["callback"]) + 1:-1])
     state["error"] = content["error"]
     if state["error"] == "ok":
         return "ok"
@@ -59,8 +69,8 @@ def get_headers(state:Dict):
 
 def get_challenge(url:str, state:Dict):
     params = {"callback":state["callback"], "username":state["username"], "_":state['clock']}
-    response = requests.get(url, params=params, headers=get_headers(state))
-    content = json.loads(response.content[len(state["callback"]) + 1:-1])
+    _, content = requestGet(url, params=params, headers=get_headers(state))
+    content = json.loads(content[len(state["callback"]) + 1:-1])
     state["challenge"] = content["challenge"]
     state["error"] = content["error"]
     state["client_ip"] = content["client_ip"]
@@ -133,9 +143,9 @@ def try_login(url:str, state:Dict):
     params["name"] = state["name"]
     params["double_stack"] = state["double_stack"]
     params["_"] = state["clock"]
-    response = requests.get(url, params=params, headers=get_headers(state))
+    _, content = requestGet(url, params=params, headers=get_headers(state))
     state["clock"] = state["clock"] + 1
-    content = json.loads(response.content[len(state["callback"]) + 1:-1])
+    content = json.loads(content[len(state["callback"]) + 1:-1])
     state["error"] = content["error"]
     return state["error"]
 
